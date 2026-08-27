@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap');
+
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+@layer base {
+  body {
+    @apply bg-bgDeep text-white min-h-screen tracking-tight font-sans;
+    background-image: radial-gradient(circle at 15% 50%, rgba(0, 229, 255, 0.08), transparent 25%),
+                      radial-gradient(circle at 85% 30%, rgba(255, 51, 102, 0.08), transparent 25%),
+                      radial-gradient(circle at 50% 80%, rgba(255, 187, 0, 0.08), transparent 25%);
+    background-attachment: fixed;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-metallic-text drop-shadow-[0_0_40px_rgba(255,255,255,0.1)];
+  }
+  
+  .glass-panel {
+    @apply bg-panelBg backdrop-blur-[20px] border border-white/10 rounded-3xl shadow-card;
+  }
+  
+  .glass-card {
+    @apply bg-card-gradient backdrop-blur-[16px] border border-white/10 border-t-white/20 rounded-3xl shadow-card transition-all duration-500 ease-out hover:-translate-y-2 hover:scale-[1.02] hover:shadow-card-hover hover:border-white/30 relative overflow-hidden;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.25);
+  }
+}

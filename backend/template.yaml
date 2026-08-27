@@ -1,0 +1,210 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: OmniSync MoMo - Serverless Multi-Network Mobile Money Reconciliation Engine
+
+Globals:
+  Function:
+    Timeout: 10
+    Runtime: python3.10
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref OmniSyncLedger
+        QUEUE_URL: !Ref MoMoQueue
+        BUCKET_NAME: !Ref RawArchiveBucket
+
+Resources:
+  # API Gateway
+  OmniSyncHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: v1
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowHeaders:
+          - "*"
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+      Auth:
+        Authorizers:
+          CognitoAuthorizer:
+            JwtConfiguration:
+              issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${OmniSyncUserPool}"
+              audience:
+                - !Ref OmniSyncUserPoolClient
+            IdentitySource: "$request.header.Authorization"
+
+  # Cognito User Pool
+  OmniSyncUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: OmniSyncUserPool
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+          RequireUppercase: true
+
+  # Cognito User Pool Client
+  OmniSyncUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref OmniSyncUserPool
+      ClientName: OmniSyncWebClient
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+
+  # DynamoDB Table
+  OmniSyncLedger:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: OmniSyncLedger
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: Status
+          AttributeType: S
+        - AttributeName: CreatedAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: Status-CreatedAt-Index
+          KeySchema:
+            - AttributeName: Status
+              KeyType: HASH
+            - AttributeName: CreatedAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  # SQS Dead-Letter Queue
+  MoMoDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: MoMoDLQ.fifo
+      FifoQueue: true
+
+  # SQS FIFO Queue
+  MoMoQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: MoMoQueue.fifo
+      FifoQueue: true
+      ContentBasedDeduplication: true
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt MoMoDLQ.Arn
+        maxReceiveCount: 3
+
+  # S3 Bucket for Raw Archives
+  RawArchiveBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  # Secrets Manager for API Keys (mocked out initially)
+  MoMoSecrets:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: OmniSyncMoMoKeys
+      Description: "Signing keys for MTN, Telecel, AT"
+      SecretString: '{"MTN_KEY":"mock-mtn","TELECEL_KEY":"mock-telecel","AT_KEY":"mock-at"}'
+
+  # Ingestion Lambda
+  IngestionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/ingestion/
+      Handler: app.lambda_handler
+      Policies:
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt MoMoQueue.QueueName
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref MoMoSecrets
+      Environment:
+        Variables:
+          SECRET_ARN: !Ref MoMoSecrets
+      Events:
+        Webhook:
+          Type: HttpApi
+          Properties:
+            Path: /webhooks/v1/momo
+            Method: POST
+            ApiId: !Ref OmniSyncHttpApi
+
+  # Worker Lambda
+  WorkerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/worker/
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OmniSyncLedger
+        - S3CrudPolicy:
+            BucketName: !Ref RawArchiveBucket
+      Events:
+        SQSQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt MoMoQueue.Arn
+            BatchSize: 10
+
+  # Fetch Lambda (For Dashboard)
+  FetchFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/fetch/
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref OmniSyncLedger
+      Events:
+        FetchTransactions:
+          Type: HttpApi
+          Properties:
+            Path: /api/transactions
+            Method: GET
+            ApiId: !Ref OmniSyncHttpApi
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+Outputs:
+  HttpApiUrl:
+    Description: URL of the HTTP API endpoint
+    Value: !Sub "https://${OmniSyncHttpApi}.execute-api.${AWS::Region}.amazonaws.com/v1"
+  UserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref OmniSyncUserPool
+  UserPoolClientId:
+    Description: Cognito User Pool Client ID
+    Value: !Ref OmniSyncUserPoolClient
