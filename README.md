@@ -165,9 +165,11 @@ GROUP BY network;
 
 ## Future Improvements
 
-- [ ] Implement AWS WAF (Web Application Firewall) on the API Gateway.
-- [ ] Implement a Dead-Letter Queue (DLQ) automated retry mechanism for failed webhooks.
-- [ ] Support custom date range filtering on the dashboard.
+- [ ] **Webhook Simulator UI**: Add a built-in dashboard tab to trigger fake mobile money webhooks (MTN, Telecel, AT) for easy stakeholder demonstrations.
+- [ ] **Date Range Filtering**: Support custom date range filtering (e.g., "Today", "Last 7 Days") on the dashboard to analyze financial metrics over specific time periods.
+- [ ] **Dead-Letter Queue (DLQ)**: Implement an automated retry mechanism and DLQ for failed webhooks to ensure absolute data reliability.
+- [ ] **AWS WAF Integration**: Attach a Web Application Firewall to the API Gateway to automatically block DDoS attacks and malicious bots.
+- [ ] **Custom Domain Setup**: Link a custom domain (e.g., `app.omnisync.com`) to the AWS Amplify frontend deployment for a production-ready brand presence.
 
 ---
 
