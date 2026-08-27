@@ -18,7 +18,10 @@ export const fetchTransactions = async () => {
         'Authorization': `Bearer ${token}`
       }
     });
-    if (!response.ok) throw new Error('Network response was not ok');
+    if (!response.ok) {
+      const errText = await response.text().catch(() => 'Unknown Error');
+      throw new Error(`HTTP ${response.status}: ${errText} (URL: ${API_URL})`);
+    }
     const data = await response.json();
     return data.transactions;
   } catch (error) {

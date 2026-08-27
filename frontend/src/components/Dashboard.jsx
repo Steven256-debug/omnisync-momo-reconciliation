@@ -21,7 +21,7 @@ const Dashboard = () => {
         const data = await fetchTransactions();
         setTransactions(data);
       } catch (err) {
-        setError('Failed to load dashboard data.');
+        setError(`Failed to load dashboard data. Reason: ${err.message}`);
       } finally {
         setLoading(false);
       }
@@ -90,7 +90,7 @@ const Dashboard = () => {
   };
 
   if (loading) return <div className="text-center p-16 text-textSecondary text-xl font-light">Loading ledger data...</div>;
-  if (error) return <div className="text-center p-16 text-telecel text-xl font-light">{error}</div>;
+  if (error) return <div className="text-center p-16 text-telecel text-lg font-mono">{error}</div>;
 
   const formatCurrency = (val) => `GHS ${val.toFixed(2)}`;
 
