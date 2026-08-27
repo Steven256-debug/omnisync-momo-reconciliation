@@ -1,66 +1,69 @@
-# OmniSync MoMo
+# OmniSync MoMo: Serverless Mobile Money Reconciliation Engine
 
-**OmniSync MoMo** is a serverless, event-driven multi-network mobile money reconciliation engine built for the Ghanaian MSME market. It automates the reconciliation of mobile money payments across MTN, Telecel, and AT networks to eliminate manual errors, revenue leakage, and operational delays.
+![Architecture Diagram](./architecture.png)
 
-## Architecture
+## 📖 The Problem (For Non-Technical Folks)
+Imagine running a business where customers pay you using three different mobile money networks (like MTN, Telecel, and AT). At the end of every day, you have to log into three different websites, download three different spreadsheets, and manually figure out if you actually received all your money. It's slow, prone to human error, and exhausting. 
 
-This solution leverages **AWS SAM** for the backend and a **React Single Page Application (SPA)** for the frontend dashboard.
+## 💡 The Solution
+**OmniSync MoMo** is a smart, automated system that solves this. Whenever a customer pays you on *any* network, the network instantly sends a notification (a "webhook") to OmniSync. Our system catches that notification, securely processes it, and updates a beautiful, unified dashboard in real-time. 
 
-### Backend (AWS Serverless)
-- **API Gateway**: Provides a public `POST /webhooks/v1/momo` endpoint for telcos to push transaction data. Also hosts a `GET /api/transactions` endpoint for the dashboard.
-- **Amazon SQS FIFO**: Ensures exact-once processing and strict ordering (content-based deduplication). Includes a Dead-Letter Queue (DLQ) for failed messages.
-- **AWS Lambda**:
-  - `IngestionLambda`: Validates webhooks and enqueues messages.
-  - `WorkerLambda`: Processes messages, performs idempotent writes to DynamoDB, and archives raw data to S3.
-  - `FetchLambda`: Retrieves transaction histories for the React dashboard.
-- **Amazon DynamoDB**: Real-time ledger using a `PAY_PER_REQUEST` billing model.
-- **Amazon S3**: Secure data lake for raw JSON webhook archiving.
-- **AWS Secrets Manager**: Securely stores webhook signing keys.
+Instead of juggling spreadsheets, merchants can open one screen and instantly see all their transactions across every network in one place.
 
-### Frontend (React & Vite)
-- Real-time transaction feed polling the backend API.
-- Summary cards showing daily gross volume across networks.
-- Visual breakdown of network distribution using Recharts (Pie Chart).
-- Premium glassmorphism UI styled with raw CSS.
+---
 
-## Setup Instructions
+## 🏗️ Architecture (For Technical Folks)
 
-### Prerequisites
-1. **AWS CLI** & **AWS SAM CLI** installed and configured.
-2. **Node.js** & **npm** installed.
-3. Appropriate AWS Sandbox/Production Credentials.
+OmniSync is a **100% Serverless, Event-Driven Application** built on AWS. It is designed to be highly scalable, fault-tolerant, and incredibly cheap to run (scaling down to zero when not in use).
 
-### 1. Deploying the Backend
-1. Navigate to the `backend` directory.
-2. Run SAM build to prepare the deployment artifacts:
-   ```bash
-   cd backend
-   sam build
-   ```
-3. Deploy the application:
-   ```bash
-   sam deploy --guided
-   ```
-4. Note the `HttpApiUrl` generated in the CloudFormation outputs.
+### How it works:
+1. **Authentication:** The React Frontend is secured by **Amazon Cognito**. Only authorized merchants can view their dashboard.
+2. **Ingestion Layer:** Telco webhooks are caught by an **Amazon API Gateway** and passed to an **Ingestion Lambda**. This ensures lightning-fast response times back to the Telcos to prevent timeouts.
+3. **Buffering Layer:** The payload is immediately pushed into an **Amazon SQS Queue**. This decouples ingestion from processing, meaning if the database ever goes down or spikes in traffic, no transactions are lost—they safely wait in the queue!
+4. **Processing Layer:** A **Worker Lambda** automatically pulls messages from the queue. It securely archives the raw JSON payload to an **Amazon S3 Bucket** (for compliance and audits) and writes the processed transaction to an **Amazon DynamoDB** ledger using idempotent operations to prevent duplicate records.
+5. **Presentation Layer:** The **React Frontend** calls the API Gateway, which triggers a **Fetch Lambda** to retrieve the latest transactions from DynamoDB and display them in a sleek, glassmorphic UI.
 
-### 2. Running the Frontend Locally
-1. Navigate to the `frontend` directory.
-2. Install dependencies (requires internet access to npm registry):
-   ```bash
-   cd frontend
-   npm install
-   ```
-3. Create a `.env` file in the `frontend` directory and add the API URL from step 1:
-   ```env
-   VITE_API_URL=https://<your-api-id>.execute-api.<region>.amazonaws.com/v1
-   ```
-4. Start the Vite development server:
-   ```bash
-   npm run dev
-   ```
+---
 
-## Testing Webhooks
-To simulate a webhook payload arriving from MTN:
+## 🛠️ Tech Stack
+- **Frontend**: React, Vite, TailwindCSS, AWS Amplify, Recharts
+- **Backend Infrastructure**: AWS Serverless Application Model (SAM) / CloudFormation
+- **Compute**: AWS Lambda (Python 3.10)
+- **Database & Storage**: Amazon DynamoDB, Amazon S3
+- **Messaging**: Amazon SQS
+- **Security & Auth**: Amazon Cognito
+
+---
+
+## 🚀 How to Run Locally
+
+### 1. Deploy the Backend
+Ensure you have the AWS CLI and SAM CLI installed and configured.
+```bash
+cd backend
+sam build
+sam deploy --guided
+```
+*Take note of your `HttpApiUrl`, `UserPoolId`, and `UserPoolClientId` in the terminal outputs.*
+
+### 2. Run the Frontend
+```bash
+cd frontend
+npm install
+```
+Create a `.env` file inside the `frontend` folder with the outputs from step 1:
+```env
+VITE_API_URL=https://<your-api-id>.execute-api.<region>.amazonaws.com/v1
+VITE_USER_POOL_ID=<your-user-pool-id>
+VITE_USER_POOL_CLIENT_ID=<your-client-id>
+```
+Start the local server:
+```bash
+npm run dev
+```
+
+### 3. Simulate a Transaction
+Open a new terminal and fire this command to simulate a webhook arriving from a Telco:
 ```bash
 curl -X POST https://<your-api-id>.execute-api.<region>.amazonaws.com/v1/webhooks/v1/momo \
      -H "Content-Type: application/json" \
@@ -72,7 +75,4 @@ curl -X POST https://<your-api-id>.execute-api.<region>.amazonaws.com/v1/webhook
            "amount": 150.50
          }'
 ```
-Wait a moment, and the transaction should appear on your React dashboard and in DynamoDB!
-
-## Problem Statement Solved
-MSMEs in Ghana often manually reconcile payments from multiple telco portals, leading to massive operational overhead. OmniSync MoMo centralizes this into one scalable, event-driven ledger, allowing merchants to focus on their business while the AWS cloud handles the heavy lifting.
+Watch your dashboard update in real-time!
