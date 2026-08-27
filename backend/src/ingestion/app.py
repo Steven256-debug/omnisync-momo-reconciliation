@@ -27,10 +27,29 @@ def lambda_handler(event, context):
         if network not in ['MTN', 'TELECEL', 'AT']:
             return {'statusCode': 400, 'body': json.dumps({'error': 'Invalid network'})}
             
-        # In a real app, we would validate the signature in the headers using the secret key
-        # secrets = get_secret()
-        # network_key = secrets.get(f"{network}_KEY")
-        # validate_signature(headers.get('x-signature'), body, network_key)
+        # Validate HMAC Signature
+        secrets = get_secret()
+        network_key = secrets.get(f"{network}_KEY")
+        
+        if not network_key:
+            return {'statusCode': 500, 'body': json.dumps({'error': 'Configuration Error: Missing signing key'})}
+            
+        x_signature = headers.get('x-signature')
+        if not x_signature:
+            return {'statusCode': 401, 'body': json.dumps({'error': 'Unauthorized: Missing signature'})}
+            
+        import hmac
+        import hashlib
+        
+        raw_body = event.get('body', '{}')
+        expected_signature = hmac.new(
+            key=network_key.encode('utf-8'),
+            msg=raw_body.encode('utf-8'),
+            digestmod=hashlib.sha256
+        ).hexdigest()
+        
+        if not hmac.compare_digest(expected_signature, x_signature):
+            return {'statusCode': 401, 'body': json.dumps({'error': 'Unauthorized: Invalid signature'})}
         
         # Create a unique deduplication ID (usually from the transaction reference)
         transaction_ref = body.get('transaction_ref', str(uuid.uuid4()))

@@ -198,6 +198,43 @@ Resources:
             Auth:
               Authorizer: CognitoAuthorizer
 
+  # Data Analytics - Glue Database
+  OmniSyncDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: omnisync_momo_db
+        Description: "Database for OmniSync MoMo Analytics"
+
+  # Data Analytics - Glue Table for Raw Webhooks
+  RawWebhooksTable:
+    Type: AWS::Glue::Table
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref OmniSyncDatabase
+      TableInput:
+        Name: raw_webhooks
+        Description: "Raw Webhook Archive"
+        TableType: EXTERNAL_TABLE
+        Parameters:
+          classification: json
+        StorageDescriptor:
+          Location: !Sub "s3://${RawArchiveBucket}/"
+          InputFormat: org.apache.hadoop.mapred.TextInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+          SerdeInfo:
+            SerializationLibrary: org.openx.data.jsonserde.JsonSerDe
+          Columns:
+            - Name: network
+              Type: string
+            - Name: transaction_ref
+              Type: string
+            - Name: merchant_id
+              Type: string
+            - Name: amount
+              Type: double
+
 Outputs:
   HttpApiUrl:
     Description: URL of the HTTP API endpoint
