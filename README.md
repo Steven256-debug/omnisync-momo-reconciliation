@@ -1,11 +1,14 @@
 # 🔄 OmniSync MoMo Reconciliation Engine
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Amplify-orange?style=for-the-badge&logo=amazon-aws)](https://main.djmgbhm1efqjx.amplifyapp.com/)
 [![AWS](https://img.shields.io/badge/AWS-Serverless-yellow?style=for-the-badge&logo=amazon-aws)](https://aws.amazon.com/)
 [![React](https://img.shields.io/badge/React-Dashboard-blue?style=for-the-badge&logo=react)](https://reactjs.org/)
 [![Python](https://img.shields.io/badge/Python-3.10-blue?style=for-the-badge&logo=python)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 > A production-ready, fully serverless multi-network mobile money reconciliation engine built for the Ghanaian MSME market. It automates the ingestion and reconciliation of mobile money payments across MTN, Telecel, and AT networks to eliminate manual errors, revenue leakage, and operational delays.
+
+🔗 **Live Demo:** [https://main.djmgbhm1efqjx.amplifyapp.com/](https://main.djmgbhm1efqjx.amplifyapp.com/)
 
 ---
 
@@ -20,6 +23,7 @@
 - [Security](#security)
 - [Data Analytics](#data-analytics)
 - [Future Improvements](#future-improvements)
+- [Author](#author)
 
 ---
 
@@ -32,6 +36,7 @@ This tool lets you:
 - Securely archive all raw transaction data for compliance.
 - View a unified, real-time financial ledger across all networks.
 - Analyze transaction volume trends in a premium glassmorphic dashboard.
+- Export transaction data to CSV for internal auditing.
 
 ### The Real Problem it Solves:
 ```text
@@ -56,6 +61,7 @@ End of day            → "All funds mathematically reconciled!" ✅
 
 | Service | Purpose |
 |---------|---------|
+| **AWS Amplify** | Hosting the React Single Page Application (SPA) |
 | **Amazon API Gateway** | REST API for Telco webhooks and Frontend fetching |
 | **Amazon Cognito** | Secure JWT authentication for the React Dashboard |
 | **AWS Lambda** (x3) | Serverless business logic (Ingestion, Worker, Fetch) |
@@ -76,6 +82,8 @@ End of day            → "All funds mathematically reconciled!" ✅
 - ✅ **Enterprise Auth** — Cognito secures the dashboard with JWTs.
 - ✅ **Real-Time Data Lake** — S3 and Athena allow business intelligence teams to run SQL.
 - ✅ **Glassmorphism UI** — premium, responsive React dashboard using Recharts.
+- ✅ **Network Filtering & Charts** — interactive daily volume bar charts and network filters.
+- ✅ **CSV Export** — instantly download ledger data into spreadsheets.
 - ✅ **Automated CI/CD** — GitHub Actions automatically deploys changes to AWS.
 
 ---
@@ -158,5 +166,12 @@ GROUP BY network;
 ## Future Improvements
 
 - [ ] Implement AWS WAF (Web Application Firewall) on the API Gateway.
-- [ ] Add CSV export functionality to the React Dashboard.
-- [ ] Implement a Dead-Letter Queue (DLQ) automated retry mechanism.
+- [ ] Implement a Dead-Letter Queue (DLQ) automated retry mechanism for failed webhooks.
+- [ ] Support custom date range filtering on the dashboard.
+
+---
+
+## Author
+
+**Steven Asante-Poku Jnr**  
+*Cloud Developer*
