@@ -1,90 +1,162 @@
-# OmniSync MoMo: Serverless Mobile Money Reconciliation Engine
+# 🔄 OmniSync MoMo Reconciliation Engine
+
+[![AWS](https://img.shields.io/badge/AWS-Serverless-yellow?style=for-the-badge&logo=amazon-aws)](https://aws.amazon.com/)
+[![React](https://img.shields.io/badge/React-Dashboard-blue?style=for-the-badge&logo=react)](https://reactjs.org/)
+[![Python](https://img.shields.io/badge/Python-3.10-blue?style=for-the-badge&logo=python)](https://python.org)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+
+> A production-ready, fully serverless multi-network mobile money reconciliation engine built for the Ghanaian MSME market. It automates the ingestion and reconciliation of mobile money payments across MTN, Telecel, and AT networks to eliminate manual errors, revenue leakage, and operational delays.
+
+---
+
+## 📌 Table of Contents
+
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [AWS Services Used](#aws-services-used)
+- [Features](#features)
+- [How It Works](#how-it-works)
+- [Setup & Deployment](#setup--deployment)
+- [Security](#security)
+- [Data Analytics](#data-analytics)
+- [Future Improvements](#future-improvements)
+
+---
+
+## Overview
+
+OmniSync MoMo solves a massive operational headache for Ghanaian businesses — manually reconciling payments from multiple mobile money networks across different portals and spreadsheets.
+
+This tool lets you:
+- Receive and process payment webhooks from MTN, Telecel, and AT instantly.
+- Securely archive all raw transaction data for compliance.
+- View a unified, real-time financial ledger across all networks.
+- Analyze transaction volume trends in a premium glassmorphic dashboard.
+
+### The Real Problem it Solves:
+```text
+Without this tool:
+Customer pays via MTN → Download spreadsheet → Customer pays via AT → Download spreadsheet → Manually reconcile at midnight ❌
+
+With this tool:
+Customer pays via MTN → Dashboard instantly updates ✅
+Customer pays via AT  → Dashboard instantly updates ✅
+End of day            → "All funds mathematically reconciled!" ✅
+```
+
+---
+
+## Architecture
 
 ![Architecture Diagram](./architecture.png)
 
-## 📖 The Problem (For Non-Technical Folks)
-Imagine running a business where customers pay you using three different mobile money networks (like MTN, Telecel, and AT). At the end of every day, you have to log into three different websites, download three different spreadsheets, and manually figure out if you actually received all your money. It's slow, prone to human error, and exhausting. 
+---
 
-## 💡 The Solution
-**OmniSync MoMo** is a smart, automated system that solves this. Whenever a customer pays you on *any* network, the network instantly sends a notification (a "webhook") to OmniSync. Our system catches that notification, securely processes it, and updates a beautiful, unified dashboard in real-time. 
+## AWS Services Used
 
-Instead of juggling spreadsheets, merchants can open one screen and instantly see all their transactions across every network in one place.
+| Service | Purpose |
+|---------|---------|
+| **Amazon API Gateway** | REST API for Telco webhooks and Frontend fetching |
+| **Amazon Cognito** | Secure JWT authentication for the React Dashboard |
+| **AWS Lambda** (x3) | Serverless business logic (Ingestion, Worker, Fetch) |
+| **Amazon SQS** | FIFO queue for strict ordering and buffering |
+| **Amazon DynamoDB** | Real-time NoSQL financial ledger |
+| **Amazon S3** | Data lake for raw JSON webhook archiving |
+| **Amazon Athena & Glue** | Analytics layer for running SQL on raw S3 data |
+| **AWS SAM** | Infrastructure as Code orchestration |
 
 ---
 
-## 🏗️ Architecture (For Technical Folks)
+## Features
 
-OmniSync is a **100% Serverless, Event-Driven Application** built on AWS. It is designed to be highly scalable, fault-tolerant, and incredibly cheap to run (scaling down to zero when not in use).
-
-### How it works:
-1. **Authentication:** The React Frontend is secured by **Amazon Cognito**. Only authorized merchants can view their dashboard.
-2. **Ingestion Layer:** Telco webhooks are caught by an **Amazon API Gateway** and passed to an **Ingestion Lambda**. This ensures lightning-fast response times back to the Telcos to prevent timeouts.
-3. **Buffering Layer:** The payload is immediately pushed into an **Amazon SQS Queue**. This decouples ingestion from processing, meaning if the database ever goes down or spikes in traffic, no transactions are lost—they safely wait in the queue!
-4. **Processing Layer:** A **Worker Lambda** automatically pulls messages from the queue. It securely archives the raw JSON payload to an **Amazon S3 Bucket** (for compliance and audits) and writes the processed transaction to an **Amazon DynamoDB** ledger using idempotent operations to prevent duplicate records.
-5. **Presentation Layer:** The **React Frontend** calls the API Gateway, which triggers a **Fetch Lambda** to retrieve the latest transactions from DynamoDB and display them in a sleek, glassmorphic UI.
-6. **Analytics Layer:** An **AWS Glue Database** crawls the raw JSON files in the S3 archive, allowing business intelligence teams to run standard SQL queries on the unstructured data using **Amazon Athena**.
-
----
-
-## 🔒 Security Architecture
-
-In a financial reconciliation engine, security is paramount to prevent fraud and data leaks. OmniSync implements a strict defense-in-depth approach:
-
-- **HMAC Cryptographic Validation (Webhooks):** When a Mobile Money provider (like MTN) sends a webhook, they mathematically sign the JSON payload using a shared secret key. Our Ingestion Lambda computes the SHA-256 HMAC hash of the incoming request and compares it to the provider's signature. If they don't match perfectly, the request is instantly rejected (`401 Unauthorized`). This makes it impossible for a hacker to inject fake transactions and artificially inflate a merchant's balance.
-- **Amazon Cognito (Dashboard):** The React frontend displays highly sensitive financial ledgers. We use Amazon Cognito to ensure enterprise-grade authentication. Cognito handles secure JWT token generation, strict password policies, and session management, ensuring only authorized merchants can access the API and view the data.
+- ✅ **Fully Serverless** — scales automatically and costs zero when idle.
+- ✅ **Decoupled Architecture** — SQS buffers traffic so databases never crash.
+- ✅ **Idempotent Processing** — strict deduplication prevents double-counting money.
+- ✅ **HMAC Cryptography** — mathematically verifies Telco signatures to block hackers.
+- ✅ **Enterprise Auth** — Cognito secures the dashboard with JWTs.
+- ✅ **Real-Time Data Lake** — S3 and Athena allow business intelligence teams to run SQL.
+- ✅ **Glassmorphism UI** — premium, responsive React dashboard using Recharts.
+- ✅ **Automated CI/CD** — GitHub Actions automatically deploys changes to AWS.
 
 ---
 
-## 🛠️ Tech Stack
-- **Frontend**: React, Vite, TailwindCSS, AWS Amplify, Recharts
-- **Backend Infrastructure**: AWS Serverless Application Model (SAM) / CloudFormation
-- **Compute**: AWS Lambda (Python 3.10)
-- **Database & Storage**: Amazon DynamoDB, Amazon S3
-- **Data Analytics**: Amazon Athena, AWS Glue
-- **Messaging**: Amazon SQS
-- **Security & Auth**: Amazon Cognito, HMAC Cryptographic Validation
-- **CI/CD**: GitHub Actions
+## How It Works
+
+### Step 1: Webhook Ingestion
+```text
+Telco sends POST request to API Gateway → Ingestion Lambda validates HMAC signature → Enqueues payload to SQS.
+```
+
+### Step 2: Processing & Archiving
+```text
+Worker Lambda pulls from SQS → Writes raw JSON to S3 Data Lake → Updates DynamoDB Ledger idempotently.
+```
+
+### Step 3: Real-Time Display
+```text
+Authorized Merchant opens React Dashboard → Fetch Lambda queries DynamoDB → Dashboard renders charts.
+```
 
 ---
 
-## 🚀 How to Run Locally
+## Setup & Deployment
 
-### 1. Deploy the Backend
-Ensure you have the AWS CLI and SAM CLI installed and configured.
+### 1. CI/CD Deployment (Recommended)
+1. Fork/Clone this repository to GitHub.
+2. Add your `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to your GitHub Repository Secrets.
+3. The included GitHub Actions pipeline will automatically deploy the AWS SAM backend!
+
+### 2. Manual Local Setup
+**Backend:**
 ```bash
 cd backend
 sam build
 sam deploy --guided
 ```
-*Take note of your `HttpApiUrl`, `UserPoolId`, and `UserPoolClientId` in the terminal outputs.*
+*(Take note of your `HttpApiUrl`, `UserPoolId`, and `UserPoolClientId` in the terminal outputs)*
 
-### 2. Run the Frontend
+**Frontend:**
 ```bash
 cd frontend
 npm install
 ```
-Create a `.env` file inside the `frontend` folder with the outputs from step 1:
+Create a `.env` file in the `frontend` directory:
 ```env
-VITE_API_URL=https://<your-api-id>.execute-api.<region>.amazonaws.com/v1
-VITE_USER_POOL_ID=<your-user-pool-id>
-VITE_USER_POOL_CLIENT_ID=<your-client-id>
+VITE_API_URL=<your-HttpApiUrl>
+VITE_USER_POOL_ID=<your-UserPoolId>
+VITE_USER_POOL_CLIENT_ID=<your-UserPoolClientId>
 ```
-Start the local server:
+Start the dashboard:
 ```bash
 npm run dev
 ```
 
-### 3. Simulate a Transaction
-Open a new terminal and fire this command to simulate a webhook arriving from a Telco:
-```bash
-curl -X POST https://<your-api-id>.execute-api.<region>.amazonaws.com/v1/webhooks/v1/momo \
-     -H "Content-Type: application/json" \
-     -H "x-signature: mock-signature" \
-     -d '{
-           "network": "MTN",
-           "transaction_ref": "REF123456",
-           "merchant_id": "M_888",
-           "amount": 150.50
-         }'
+---
+
+## Security
+
+In a financial reconciliation engine, security is paramount. OmniSync implements a strict defense-in-depth approach:
+
+- **HMAC Cryptographic Validation:** When a Mobile Money provider sends a webhook, they mathematically sign the JSON payload. Our Ingestion Lambda computes the SHA-256 HMAC hash of the incoming request and compares it to the provider's signature. If they don't match, the request is instantly rejected (`401 Unauthorized`).
+- **Amazon Cognito:** The React frontend displays highly sensitive financial ledgers. We use Amazon Cognito to ensure enterprise-grade authentication. Cognito handles secure JWT token generation, strict password policies, and session management.
+
+---
+
+## Data Analytics
+
+An **AWS Glue Database** crawls the raw JSON files in the S3 archive. This allows business intelligence teams to run standard SQL queries directly on the unstructured data using **Amazon Athena**.
+
+Example Query:
+```sql
+SELECT network, sum(amount) as total_volume 
+FROM raw_webhooks 
+GROUP BY network;
 ```
-Watch your dashboard update in real-time!
+
+---
+
+## Future Improvements
+
+- [ ] Implement AWS WAF (Web Application Firewall) on the API Gateway.
+- [ ] Add CSV export functionality to the React Dashboard.
+- [ ] Implement a Dead-Letter Queue (DLQ) automated retry mechanism.
