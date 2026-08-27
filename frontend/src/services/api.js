@@ -1,7 +1,16 @@
 import { fetchAuthSession } from 'aws-amplify/auth';
 
 // Replace this with your actual API Gateway URL once deployed
-const API_URL = import.meta.env.VITE_API_URL || 'https://mock-api.local';
+let API_URL = import.meta.env.VITE_API_URL || 'https://mock-api.local';
+
+// Fix accidental 'KEY=VALUE' injection from Amplify Console
+if (API_URL.startsWith('VITE_API_URL=')) {
+  API_URL = API_URL.replace('VITE_API_URL=', '');
+}
+if (API_URL.startsWith('=')) {
+  API_URL = API_URL.substring(1);
+}
+API_URL = API_URL.trim();
 
 export const fetchTransactions = async () => {
   // If no real API URL is provided, return mock data for local testing
