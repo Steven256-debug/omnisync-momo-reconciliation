@@ -26,6 +26,15 @@ OmniSync is a **100% Serverless, Event-Driven Application** built on AWS. It is 
 
 ---
 
+## 🔒 Security Architecture
+
+In a financial reconciliation engine, security is paramount to prevent fraud and data leaks. OmniSync implements a strict defense-in-depth approach:
+
+- **HMAC Cryptographic Validation (Webhooks):** When a Mobile Money provider (like MTN) sends a webhook, they mathematically sign the JSON payload using a shared secret key. Our Ingestion Lambda computes the SHA-256 HMAC hash of the incoming request and compares it to the provider's signature. If they don't match perfectly, the request is instantly rejected (`401 Unauthorized`). This makes it impossible for a hacker to inject fake transactions and artificially inflate a merchant's balance.
+- **Amazon Cognito (Dashboard):** The React frontend displays highly sensitive financial ledgers. We use Amazon Cognito to ensure enterprise-grade authentication. Cognito handles secure JWT token generation, strict password policies, and session management, ensuring only authorized merchants can access the API and view the data.
+
+---
+
 ## 🛠️ Tech Stack
 - **Frontend**: React, Vite, TailwindCSS, AWS Amplify, Recharts
 - **Backend Infrastructure**: AWS Serverless Application Model (SAM) / CloudFormation
