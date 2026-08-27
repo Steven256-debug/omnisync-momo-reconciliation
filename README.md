@@ -22,6 +22,7 @@ OmniSync is a **100% Serverless, Event-Driven Application** built on AWS. It is 
 3. **Buffering Layer:** The payload is immediately pushed into an **Amazon SQS Queue**. This decouples ingestion from processing, meaning if the database ever goes down or spikes in traffic, no transactions are lost—they safely wait in the queue!
 4. **Processing Layer:** A **Worker Lambda** automatically pulls messages from the queue. It securely archives the raw JSON payload to an **Amazon S3 Bucket** (for compliance and audits) and writes the processed transaction to an **Amazon DynamoDB** ledger using idempotent operations to prevent duplicate records.
 5. **Presentation Layer:** The **React Frontend** calls the API Gateway, which triggers a **Fetch Lambda** to retrieve the latest transactions from DynamoDB and display them in a sleek, glassmorphic UI.
+6. **Analytics Layer:** An **AWS Glue Database** crawls the raw JSON files in the S3 archive, allowing business intelligence teams to run standard SQL queries on the unstructured data using **Amazon Athena**.
 
 ---
 
@@ -30,8 +31,10 @@ OmniSync is a **100% Serverless, Event-Driven Application** built on AWS. It is 
 - **Backend Infrastructure**: AWS Serverless Application Model (SAM) / CloudFormation
 - **Compute**: AWS Lambda (Python 3.10)
 - **Database & Storage**: Amazon DynamoDB, Amazon S3
+- **Data Analytics**: Amazon Athena, AWS Glue
 - **Messaging**: Amazon SQS
-- **Security & Auth**: Amazon Cognito
+- **Security & Auth**: Amazon Cognito, HMAC Cryptographic Validation
+- **CI/CD**: GitHub Actions
 
 ---
 
